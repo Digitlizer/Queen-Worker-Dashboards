@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gerald Payroll Dashboard</title>
+
+<!--
+================================================================================
+  QUEEN ETUS - PAYROLL DASHBOARD
+  Data pulled from "Queen Etus - Business Finance System"
+  Tabs: "Payroll- Flower Girls" and "Payroll- Concrete Workz"
+  Snapshot taken 26 Oct 2026 - 504 job rows, Jan 2026 to Aug 2026.
+
+  HOW THE SHEET IS READ
+    Column D  Date            Column E  Worker
+    Column F  # of Hours      Column G  Amount
+    Column H  Job             Column I  Notes
+    A row whose Notes cell says "TIP" is counted as a tip, not as payroll.
+
+  TO GO LIVE (dashboard refreshes itself from the sheet)
+    1. In the sheet: File > Share > Publish to web
+    2. Publish "Payroll- Flower Girls" as CSV, copy the link
+    3. Publish "Payroll- Concrete Workz" as CSV, copy the link
+    4. Paste both into LIVE below and set LIVE.enabled = true
+================================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --navy-deep:#061a2b; --navy:#0a2f4f;
+  --teal:#1fd1c1; --blue:#0a84ff; --gold:#ffb020;
+  --gray-1:#e6ecf1; --gray-2:#8fa3b5;
+  --surface:#0b2236; --surface-2:#0e2b42;
+  --hair:rgba(230,236,241,.09); --hair-2:rgba(230,236,241,.05);
+  --font:'Poppins',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--navy-deep); color:var(--gray-1); font-family:var(--font);
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+  background-image:
+    radial-gradient(760px 420px at 88% -8%, rgba(31,209,193,.11), transparent 62%),
+    radial-gradient(680px 400px at 4% 2%, rgba(10,132,255,.13), transparent 60%);
+  background-attachment:fixed;
+}
+.shell{max-width:1400px; margin:0 auto; padding:26px 22px 64px}
+button{font-family:inherit; cursor:pointer}
+:focus-visible{outline:2px solid var(--teal); outline-offset:2px; border-radius:8px}
+::-webkit-scrollbar{width:9px; height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(230,236,241,.13); border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:rgba(31,209,193,.35)}
+
+/* hero */
+.hero{
+  position:relative; overflow:hidden; border-radius:22px;
+  background:linear-gradient(122deg,#0a2f4f 0%,#08243c 45%,#061a2b 100%);
+  border:1px solid var(--hair); padding:26px 30px;
+  display:flex; align-items:center; gap:26px; flex-wrap:wrap;
+}
+.hero::before{content:''; position:absolute; inset:0 0 auto 0; height:3px;
+  background:linear-gradient(90deg,var(--teal),var(--blue) 55%,transparent)}
+.hero::after{content:''; position:absolute; right:-90px; top:-110px; width:340px; height:340px;
+  border-radius:50%; background:radial-gradient(circle,rgba(31,209,193,.16),transparent 66%); pointer-events:none}
+.hero .id{display:flex; align-items:center; gap:18px; min-width:0}
+.avwrap{position:relative; flex:none}
+.avwrap::after{content:''; position:absolute; inset:-4px; border-radius:50%;
+  background:conic-gradient(from 200deg,var(--teal),var(--blue),var(--teal)); z-index:0; opacity:.85}
+.av{position:relative; z-index:1; border-radius:50%; overflow:hidden;
+  display:grid; place-items:center; color:#04121e; font-weight:700;
+  background:var(--teal); border:3px solid #08243c}
+.av.l{width:84px; height:84px; font-size:26px}
+.av.s{width:28px; height:28px; font-size:11px; border-width:2px}
+.hero h1{margin:0; font-size:27px; font-weight:700; letter-spacing:-.025em; color:#fff; line-height:1.15}
+.hero .role{margin-top:5px; display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  font-size:13px; color:var(--gray-2)}
+.tag{font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--teal); background:rgba(31,209,193,.11); border:1px solid rgba(31,209,193,.24);
+  padding:3px 10px; border-radius:999px}
+.paybadge{font-size:11px; font-weight:700; letter-spacing:.04em; padding:3px 10px; border-radius:999px}
+.paybadge.owed{color:#06121c; background:var(--gold); box-shadow:0 2px 12px -4px rgba(255,176,32,.8)}
+.paybadge.clear{color:var(--gray-2); background:rgba(230,236,241,.07); border:1px solid var(--hair)}
+.hero .ctrl{margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:11px;
+  position:relative; z-index:2}
+.ctrl-lab{font-size:10.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--gray-2)}
+
+.rangewrap{display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end}
+.seg{display:flex; background:rgba(6,26,43,.6); border:1px solid var(--hair); border-radius:999px; padding:3px}
+.seg button{border:0; background:none; color:var(--gray-2); font-size:12px; font-weight:600;
+  padding:6px 14px; border-radius:999px; transition:color .15s, background .15s}
+.seg button:hover{color:var(--teal)}
+.seg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--teal),#12b5a8); color:#04121e;
+  box-shadow:0 4px 14px -6px rgba(31,209,193,.8)}
+.dates{display:flex; align-items:center; gap:8px; background:rgba(6,26,43,.6);
+  border:1px solid var(--hair); border-radius:999px; padding:5px 14px; color:var(--gray-2); font-size:12px}
+.dates input{color-scheme:dark; border:0; background:none; color:var(--gray-1);
+  font-family:var(--font); font-size:12px; font-weight:600; padding:2px}
+.chip-btn{border:1px solid var(--hair); background:rgba(6,26,43,.6); color:var(--gray-2);
+  border-radius:999px; padding:7px 15px; font-size:12px; font-weight:600}
+.chip-btn:hover{color:var(--teal); border-color:rgba(31,209,193,.4)}
+
+.switch{position:relative}
+.switch>button{display:flex; align-items:center; gap:9px; border:1px solid var(--hair);
+  background:rgba(6,26,43,.6); color:var(--gray-1); border-radius:999px;
+  padding:5px 14px 5px 5px; font-size:12.5px; font-weight:600}
+.switch>button:hover{border-color:rgba(31,209,193,.4)}
+.switch .menu{position:absolute; top:calc(100% + 9px); right:0; z-index:70; width:300px;
+  background:#0c2740; border:1px solid var(--hair); border-radius:11px;
+  box-shadow:0 22px 60px -14px rgba(0,0,0,.75); padding:6px; display:none; max-height:360px; overflow:auto}
+.switch .menu.open{display:block}
+.wrow{display:flex; align-items:center; gap:11px; width:100%; text-align:left;
+  border:0; background:none; color:var(--gray-1); padding:9px 10px; border-radius:9px}
+.wrow:hover{background:rgba(31,209,193,.09)}
+.wrow[aria-current="true"]{background:rgba(31,209,193,.15)}
+.wrow .nm{font-size:13px; font-weight:600; display:block}
+.wrow .mt{font-size:11px; color:var(--gray-2); display:block}
+.wrow .amt{margin-left:auto; font-size:12.5px; font-weight:700; color:var(--teal)}
+
+/* kpis */
+.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:18px}
+@media(max-width:900px){.kpis{grid-template-columns:1fr}}
+.card{background:linear-gradient(160deg,var(--surface-2),var(--surface));
+  border:1px solid var(--hair); border-radius:var(--r)}
+.kpi{padding:22px 24px 20px; position:relative; overflow:hidden}
+.kpi::before{content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--accent); opacity:.9}
+.kpi::after{content:''; position:absolute; right:-40px; bottom:-60px; width:170px; height:170px;
+  border-radius:50%; background:var(--glow); pointer-events:none}
+.kpi .top{display:flex; align-items:center; gap:11px; position:relative; z-index:1}
+.kpi .ico{width:36px; height:36px; border-radius:11px; display:grid; place-items:center; flex:none;
+  background:var(--glow2); color:var(--accent); font-size:16px}
+.kpi .lbl{font-size:12.5px; font-weight:500; color:var(--gray-2)}
+.kpi .big{position:relative; z-index:1; margin-top:18px; font-size:34px; font-weight:700;
+  letter-spacing:-.035em; line-height:1; color:#fff}
+.kpi .big .dec{font-size:20px; font-weight:600; color:var(--gray-2); letter-spacing:-.02em}
+.kpi .big.empty{font-size:22px; color:var(--gray-2); font-weight:600; letter-spacing:-.01em}
+.kpi .sub{position:relative; z-index:1; margin-top:13px; display:flex; align-items:center; gap:9px;
+  font-size:11.5px; color:var(--gray-2); flex-wrap:wrap}
+.pill{font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px}
+.pill.up{color:#3ddc97; background:rgba(61,220,151,.13)}
+.pill.down{color:#ff7a6b; background:rgba(255,122,107,.13)}
+.pill.flat{color:var(--gray-2); background:rgba(230,236,241,.08)}
+.pill.warn{color:var(--gold); background:rgba(255,176,32,.13)}
+
+/* panel */
+.panel{margin-top:18px; padding:22px 24px 24px}
+.phead{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+.phead h2{margin:0; font-size:16px; font-weight:600; letter-spacing:-.015em; color:#fff}
+.phead .meta{margin-left:auto; font-size:12px; color:var(--gray-2); font-weight:500}
+.legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:6px}
+.lg{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--gray-2)}
+.lg i{width:9px; height:9px; border-radius:3px; display:block}
+.chartbox{height:310px; position:relative; margin-top:18px}
+
+/* business cards */
+.bizgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(440px,1fr)); gap:18px; margin-top:18px}
+@media(max-width:960px){.bizgrid{grid-template-columns:1fr}}
+.biz{display:flex; flex-direction:column; overflow:hidden}
+.bizhead{padding:18px 22px 16px; border-bottom:1px solid var(--hair); position:relative}
+.bizhead::before{content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--bc)}
+.biztitle{display:flex; align-items:center; gap:11px}
+.biztitle .bn{font-size:16px; font-weight:600; color:#fff; letter-spacing:-.015em}
+.biztitle .cnt{font-size:11px; font-weight:600; color:var(--gray-2);
+  background:rgba(230,236,241,.07); padding:2px 9px; border-radius:999px}
+.bizstats{display:flex; gap:30px; margin-top:14px; flex-wrap:wrap}
+.bizstats .k{font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--gray-2)}
+.bizstats .v{font-size:17px; font-weight:700; margin-top:3px; color:#fff; letter-spacing:-.02em}
+.bizstats .v.teal{color:var(--teal)} .bizstats .v.gold{color:var(--gold)}
+.tw{overflow:auto; max-height:420px}
+table{width:100%; border-collapse:collapse; font-size:13px}
+th,td{padding:11px 16px; text-align:left; white-space:nowrap}
+td.status{font-size:12px}
+td.status .paid{color:var(--gray-2)}
+td.status .duechip{color:#06121c; background:var(--gold); font-weight:700;
+  font-size:10.5px; letter-spacing:.05em; padding:2px 8px; border-radius:999px}
+tr.duerow td{background:rgba(255,176,32,.06)}
+tr.duerow td.amt{color:var(--gold)}
+tr.duerow:hover td{background:rgba(255,176,32,.11)}
+th{position:sticky; top:0; z-index:2; background:#0a2438;
+  font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gray-2); border-bottom:1px solid var(--hair)}
+td{border-bottom:1px solid var(--hair-2); color:var(--gray-1)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:rgba(31,209,193,.05)}
+th.num,td.num{text-align:right}
+td.job{font-weight:500; color:#fff; white-space:normal; min-width:180px}
+td.date{color:var(--gray-2); font-size:12.5px}
+td.amt{font-weight:600}
+td.tip{color:var(--gold); font-weight:600}
+td.tip.zero{color:var(--gray-2); font-weight:400}
+tfoot td{position:sticky; bottom:0; background:#0a2438; border-top:1px solid var(--hair);
+  border-bottom:0; font-weight:700; color:#fff; font-size:13px}
+tfoot td.lbl{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--gray-2); font-weight:600}
+
+.state{padding:50px 24px; text-align:center}
+.state h3{margin:0 0 8px; font-size:15px; font-weight:600; color:#fff}
+.state p{margin:0 auto; max-width:470px; font-size:13px; color:var(--gray-2)}
+.hidden{display:none !important}
+.toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
+  background:var(--teal); color:#04121e; padding:11px 20px; border-radius:999px;
+  font-size:13px; font-weight:600; box-shadow:0 14px 40px -10px rgba(31,209,193,.6);
+  opacity:0; pointer-events:none; transition:opacity .2s, transform .2s}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-5px)}
+.foot{margin-top:26px; display:flex; gap:8px; align-items:center; justify-content:center;
+  font-size:11px; color:var(--gray-2); letter-spacing:.03em; flex-wrap:wrap; text-align:center}
+.foot b{color:var(--teal); font-weight:600}
+@media(prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+@media print{ body{background:#fff; color:#111} .switch,.seg,.dates,.chip-btn{display:none!important} }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="hero">
+    <div class="id">
+      <div class="avwrap"><span class="av l" id="heroAv"></span></div>
+      <div>
+        <h1 id="heroName">Payroll Dashboard</h1>
+        <div class="role">
+          <span class="tag" id="heroTag">Worker</span>
+          <span class="paybadge clear" id="payable">All paid</span>
+          <span id="heroMeta">&mdash;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl">
+      <div style="display:flex; gap:9px; align-items:center">
+        <span class="ctrl-lab">Date range</span>
+        <div class="switch" id="switch">
+          <button type="button" id="switchBtn" aria-haspopup="true" aria-expanded="false">
+            <span class="av s" id="switchAv"></span><span id="switchName">Worker</span><span style="font-size:9px">&#9660;</span>
+          </button>
+          <div class="menu" id="switchMenu"></div>
+        </div>
+      </div>
+      <div class="rangewrap">
+        <div class="seg" id="periods" role="group" aria-label="Date range"></div>
+        <div class="dates">
+          <input type="date" id="from" aria-label="From date"><span>&ndash;</span><input type="date" id="to" aria-label="To date">
+        </div>
+        <button class="chip-btn" id="shareBtn">Copy link</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card panel">
+    <div class="phead">
+      <h2>Monthly earnings by business</h2>
+      <span class="meta" id="chartMeta"></span>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="chartbox"><canvas id="chart"></canvas></div>
+  </section>
+
+  <div class="bizgrid" id="businesses"></div>
+
+  <div class="foot">
+    <span>Source: <b>Queen Etus &ndash; Business Finance System</b> &middot; Payroll- Flower Girls + Payroll- Concrete Workz</span>
+    <span id="snap"></span>
+  </div>
+</div>
+
+<div class="toast" id="toast">Link copied</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ==========================================================================
+   LIVE MODE - see the header comment for the three steps
+   ========================================================================== */
+const SHEET_ID = '1IqtrMsvETtWjYCSIjGqObdJUvNoM5_uVMucGBwqcw5I';
+const csvUrl = tab =>
+  'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+  '/gviz/tq?tqx=out:csv&headers=0&sheet=' + encodeURIComponent(tab);
+
+const LIVE = {
+  enabled: true,
+  flowergirlz:   csvUrl('Payroll- Flower Girls'),
+  concreteWorkz: csvUrl('Payroll- Concrete Workz')
+};
+
+const CONFIG = { defaultWorker: 'Gerald', currency: '$' };
+const BIZ = ['Flowergirlz', 'Concrete Workz'];
+const BIZCOLOR = { 'Flowergirlz': '#1fd1c1', 'Concrete Workz': '#0a84ff' };
+const SNAPSHOT = [[0,"Jan-06-2026","Gerald",105,"127 Girouard Wood",0,4.2,0],[0,"Jan-07-2026","Gerald",200,"101 west green hill circle",0,0,0],[0,"Jan-08-2026","Gerald",220,"101 west green hill circle",0,0,0],[0,"Jan-12-2026","Gerald",175,"406 settlers trace blvd",0,0,0],[0,"Jan-15-2026","Gerald",150,"406 settlers trace blvd",0,0,0],[0,"Jan-23-2026","Gerald",175,"531 nap lane",0,0,0],[0,"Jan-06-2026","Dad",95,"127 Girouard Wood",0,0,0],[0,"Jan-07-2026","Dad",150,"101 west green hill circle",0,0,0],[0,"Jan-12-2026","Dad",75,"406 settlers trace blvd",0,0,0],[0,"Feb-02-2026","Dad",60,"414 Gordon crocket",0,0,0],[0,"Jan-14-2026","Jorge",125,"406 settlers trace blvd",0,0,0],[0,"Jan-07-2026","Yuli",150,"101 west green hill circle",0,0,0],[0,"Jan-08-2026","Yuli",220,"101 west green hill circle",0,0,0],[0,"Jan-12-2026","Yuli",75,"406 settlers trace blvd",0,0,0],[0,"Jan-14-2026","Yuli",125,"406 settlers trace blvd",0,0,0],[0,"Jan-23-2026","Yuli",150,"531 Nap Lane",0,0,0],[0,"Feb-02-2026","Yuli",60,"414 Gordon Crocket",0,0,0],[0,"Feb-09-2026","Gerald",150,"128 Gateway Drive",0,0,1],[0,"Feb-09-2026","Dad",125,"128 Gateway Drive",0,0,1],[0,"Feb-09-2026","Yuli",175,"128 Gateway Drive",0,0,1],[0,"Feb-09-2026","Jorge",150,"128 Gateway Drive",0,0,1],[0,"Feb-10-2026","Gerald",175,"128 Gateway Drive",0,0,1],[0,"Feb-10-2026","Dad",125,"128 Gateway Drive",0,0,1],[0,"Feb-10-2026","Jorge",150,"128 Gateway Drive",0,0,1],[0,"Feb-11-2026","Gerald",400,"128 Gateway Drive",0,0,1],[0,"Feb-11-2026","Dad",200,"128 Gateway Drive",0,0,1],[0,"Feb-11-2026","Jorge",260,"128 Gateway Drive",0,0,1],[0,"Feb-11-2026","Yuli",80,"128 Gateway Drive",0,0,1],[0,"Feb-11-2026","Gerald",75,"128 Gateway Drive",1,0,1],[0,"Feb-11-2026","Dad",75,"128 Gateway Drive",1,0,1],[0,"Feb-11-2026","Jorge",75,"128 Gateway Drive",1,0,1],[0,"Feb-11-2026","Yuli",75,"128 Gateway Drive",1,0,1],[0,"Feb-13-2026","Yuli",60,"202 Eddie Ann",0,0,1],[0,"Feb-13-2026","Dad",60,"202 Eddie Ann",0,0,1],[0,"Feb-16-2026","Leslie",60,"201 Sunswept Bridge",0,0,2],[0,"Feb-16-2026","Gerald",50,"1005 Emancipation Dr",0,0,2],[0,"Feb-16-2026","Dad",40,"1005 Emancipation Dr",0,0,2],[0,"Feb-16-2026","Jorge",40,"1005 Emancipation Dr",0,0,2],[0,"Feb-17-2026","Gerald",200,"1005 Emancipation Dr",0,0,2],[0,"Feb-17-2026","Jorge",150,"1005 Emancipation Dr",0,0,2],[0,"Feb-17-2026","Yuli",75,"1005 Emancipation Dr",0,0,2],[0,"Feb-18-2026","Gerald",125,"1005 Emancipation Dr",0,0,2],[0,"Feb-18-2026","Jorge",100,"1005 Emancipation Dr",0,0,2],[0,"Feb-18-2026","Yuli",40,"1005 Emancipation Dr",0,0,2],[0,"Feb-19-2026","Gerald",300,"1005 Emancipation Dr",0,0,3],[0,"Feb-19-2026","Dad",200,"1005 Emancipation Dr",0,0,3],[0,"Feb-19-2026","Jorge",240,"1005 Emancipation Dr",0,0,3],[0,"Feb-19-2026","Yuli",180,"1005 Emancipation Dr",0,0,3],[0,"Feb-20-2026","Gerald",300,"1005 Emancipation Dr",0,0,3],[0,"Feb-20-2026","Dad",150,"1005 Emancipation Dr",0,0,3],[0,"Feb-20-2026","Jorge",225,"1005 Emancipation Dr",0,0,3],[0,"Feb-20-2026","Yuli",225,"1005 Emancipation Dr",0,0,3],[0,"Feb-21-2026","Gerald",300,"1005 Emancipation Dr",0,0,3],[0,"Feb-21-2026","Jorge",225,"1005 Emancipation Dr",0,0,3],[0,"Feb-21-2026","Yuli",200,"1005 Emancipation Dr",0,0,3],[0,"Feb-23-2026","Gerald",300,"1005 Emancipation Dr",0,0,3],[0,"Feb-23-2026","Jorge",225,"1005 Emancipation Dr",0,0,3],[0,"Feb-23-2026","Yuli",200,"1005 Emancipation Dr",0,0,3],[0,"Feb-23-2026","Dilver",75,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Gerald",340,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Jorge",260,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Yuli",140,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Jorge",40,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Gerald",100,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Jorge",60,"1005 Emancipation Dr",0,0,3],[0,"Feb-24-2026","Yuli",100,"1005 Emancipation Dr",0,0,3],[0,"Feb-23-2026","Yuli",120,"104 Bridge Creek Cove",0,0,3],[0,"Feb-23-2026","Dilver",100,"104 Bridge Creek Cove",0,0,3],[0,"Mar-04-2026","Gerald",150,"531 naplane (1)",0,0,4],[0,"Mar-04-2026","Yuli",150,"531 naplane (1)",0,0,4],[0,"Mar-05-2026","Gerald",150,"101 Hermitage Ave",0,0,4],[0,"Mar-10-2026","El Flako",160,"414 Gordon Crocket (1)",0,0,5],[0,"Mar-11-2026","Gerald",100,"116 Rue Des Bouvier",0,0,5],[0,"Mar-11-2026","Yuli",100,"116 Rue Des Bouvier",0,0,5],[0,"Mar-11-2026","Gerald",50,"102 Eastwood",0,0,5],[0,"Mar-11-2026","Yuli",50,"102 Eastwood",0,0,5],[0,"Mar-12-2026","Gerald",125,"120 Octavia",0,0,5],[0,"Mar-12-2026","Yuli",75,"120 Octavia",0,0,5],[0,"Mar-13-2026","El Flako",100,"102 Whitebark",0,0,5],[0,"Mar-16-2026","El Flako",180,"15555 Centerville",0,0,6],[0,"Mar-17-2026","El Flako",180,"15555 Centerville",0,0,6],[0,"Mar-18-2026","El Flako",140,"125 Rost Rd",0,0,6],[0,"Mar-19-2026","Gerald",200,"223 Allegro Ave",0,0,6],[0,"Mar-19-2026","Dad",140,"223 Allegro Ave",0,0,6],[0,"Mar-19-2026","Jorge",160,"223 Allegro Ave",0,0,6],[0,"Mar-19-2026","El Flako",160,"223 Allegro Ave",0,0,6],[0,"Mar-19-2026","Yuli",140,"223 Allegro Ave",0,0,6],[0,"Mar-20-2026","Yuli",160,"223 Allegro Ave",0,0,6],[0,"Mar-20-2026","El Flako",200,"107 Alexis Lane",0,0,6],[0,"Mar-20-2026","Gerald",250,"321 Silverside Parkway",0,0,6],[0,"Mar-20-2026","Jorge",200,"321 Silverside Parkway",0,0,6],[0,"Mar-20-2026","Dad",140,"321 Silverside Parkway",0,0,6],[0,"Mar-23-2026","Gerald",125,"112 Barton Terrace",0,0,7],[0,"Mar-23-2026","Jorge",100,"112 Barton Terrace",0,0,7],[0,"Mar-23-2026","Yuli",125,"112 Barton Terrace",0,0,7],[0,"Mar-23-2026","Gerald",125,"132 Ambience",0,0,7],[0,"Mar-23-2026","Jorge",100,"132 Ambience",0,0,7],[0,"Mar-24-2026","Gerald",200,"1150 Barras",0,0,7],[0,"Mar-24-2026","Jorge",180,"1150 Barras",0,0,7],[0,"Mar-25-2026","Gerald",300,"1101 E Bridge",0,0,7],[0,"Mar-25-2026","Jorge",260,"1101 E Bridge",0,0,7],[0,"Mar-25-2026","Yuli",200,"1101 E Bridge",0,0,7],[0,"Mar-26-2026","Gerald",220,"100 Shinnecock",0,0,7],[0,"Mar-26-2026","Jorge",180,"100 Shinnecock",0,0,7],[0,"Mar-26-2026","Yuli",100,"100 Shinnecock",0,0,7],[0,"Mar-27-2026","Gerald",200,"702 Farmington",0,0,7],[0,"Mar-27-2026","Jorge",160,"702 Farmington",0,0,7],[0,"Mar-29-2026","Jorge",140,"210 N William Dr",0,0,7],[0,"Mar-30-2026","Gerald",160,"201 belvue plantation",0,0,8],[0,"Mar-30-2026","Dad",140,"201 belvue plantation",0,0,8],[0,"Mar-31-2026","Gustavo",250,"118 metals",0,0,8],[0,"Mar-31-2026","Yuli",100,"118 metals",0,0,8],[0,"Apr-03-2026","Gustavo",75,"118 metals",0,0,8],[0,"Apr-03-2026","Yuli",125,"118 metals",0,0,8],[0,"Mar-31-2026","Gerald",75,"105 stillwaters",0,0,8],[0,"Mar-31-2026","Dad",75,"105 stillwaters",0,0,8],[0,"Mar-31-2026","Gerald",150,"110 Amber pond lane",0,0,8],[0,"Mar-31-2026","Dad",125,"110 Amber pond lane",0,0,8],[0,"Apr-01-2026","Gerald",225,"308 E lafayette st",0,0,9],[0,"Apr-01-2026","Dad",175,"308 E lafayette st",0,0,9],[0,"Apr-01-2026","Jorge",175,"308 E lafayette st",0,0,9],[0,"Apr-02-2026","Gerald",250,"308 E lafayette st",0,0,9],[0,"Apr-02-2026","Dad",175,"308 E lafayette st",0,0,9],[0,"Apr-02-2026","Jorge",200,"308 E lafayette st",0,0,9],[0,"Apr-03-2026","Gerald",325,"308 E lafayette st",0,0,9],[0,"Apr-03-2026","Dad",225,"308 E lafayette st",0,0,9],[0,"Apr-03-2026","Jorge",275,"308 E lafayette st",0,0,9],[0,"Apr-04-2026","Gerald",275,"308 E lafayette st",0,0,9],[0,"Apr-04-2026","Dad",225,"308 E lafayette st",0,0,9],[0,"Apr-04-2026","Jorge",225,"308 E lafayette st",0,0,9],[0,"Apr-07-2026","Gerald",175,"308 E lafayette st",0,0,9],[0,"Apr-07-2026","Dad",150,"308 E lafayette st",0,0,9],[0,"Apr-06-2026","Gerald",125,"107 mid ocean court",0,0,9],[0,"Apr-06-2026","Dad",125,"107 mid ocean court",0,0,9],[0,"Apr-08-2026","Gerald",225,"552 napoleon",0,0,9],[0,"Apr-08-2026","Yuli",175,"552 napoleon",0,0,9],[0,"Apr-08-2026","Jorge",160,"210 N William Dr",0,0,9],[0,"Apr-09-2026","Gerald",225,"456 Broussard",0,0,9],[0,"Apr-09-2026","Dad",175,"456 Broussard",0,0,9],[0,"Apr-09-2026","Jorge",175,"456 Broussard",0,0,9],[0,"Apr-09-2026","Yuli",175,"456 Broussard",0,0,9],[0,"Apr-10-2026","Gerald",175,"456 Broussard",0,0,9],[0,"Apr-10-2026","Dad",150,"456 Broussard",0,0,9],[0,"Apr-10-2026","Jorge",150,"456 Broussard",0,0,9],[0,"Apr-15-2026","Gerald",225,"456 Broussard",0,0,9],[0,"Apr-15-2026","Dad",175,"456 Broussard",0,0,9],[0,"Apr-15-2026","Jorge",175,"456 Broussard",0,0,9],[0,"Apr-15-2026","Yuli",75,"456 Broussard",0,0,9],[0,"Apr-23-2026","Yuli",150,"456 Broussard",0,0,9],[0,"Apr-24-2026","Gerald",225,"456 Broussard",0,0,9],[0,"Apr-24-2026","Dad",175,"456 Broussard",0,0,9],[0,"Apr-24-2026","Jorge",175,"456 Broussard",0,0,9],[0,"Apr-25-2026","Gerald",150,"456 Broussard",0,0,9],[0,"Apr-25-2026","Jorge",125,"456 Broussard",0,0,9],[0,"Apr-25-2026","Yuli",125,"456 Broussard",0,0,9],[0,"Apr-27-2026","Gerald",275,"456 Broussard",0,0,9],[0,"Apr-27-2026","Jorge",225,"456 Broussard",0,0,9],[0,"Apr-27-2026","Yuli",150,"456 Broussard",0,0,9],[0,"Apr-27-2026","Gerald",200,"456 Broussard",1,0,9],[0,"Apr-27-2026","Jorge",100,"456 Broussard",1,0,9],[0,"Apr-27-2026","Yuli",100,"456 Broussard",1,0,9],[0,"Apr-13-2026","Gerald",175,"414 Gordon Crocket (2)",0,0,9],[0,"Apr-14-2026","Gerald",150,"263 Louise st",0,0,10],[0,"Apr-14-2026","Jorge",125,"263 Louise st",0,0,10],[0,"Apr-14-2026","Yuli",125,"263 Louise st",0,0,10],[0,"Apr-16-2026","Gerald",275,"301 grassy meadows",0,0,10],[0,"Apr-16-2026","Jorge",200,"301 grassy meadows",0,0,10],[0,"Apr-16-2026","Dad",175,"301 grassy meadows",0,0,10],[0,"Apr-17-2026","Gerald",225,"204 White Sky Dr",0,0,10],[0,"Apr-17-2026","Jorge",180,"204 White Sky Dr",0,0,10],[0,"Apr-17-2026","Yuli",180,"204 White Sky Dr",0,0,10],[0,"Apr-18-2026","Gerald",150,"204 White Sky Dr",0,0,10],[0,"Apr-18-2026","Yuli",125,"204 White Sky Dr",0,0,10],[0,"Apr-20-2026","Gerald",225,"619 bayou to bayou",0,0,10],[0,"Apr-20-2026","Dad",150,"619 bayou to bayou",0,0,10],[0,"Apr-20-2026","Jorge",175,"619 bayou to bayou",0,0,10],[0,"Apr-21-2026","Gerald",225,"619 bayou to bayou",0,0,10],[0,"Apr-21-2026","Dad",175,"619 bayou to bayou",0,0,10],[0,"Apr-22-2026","Gerald",275,"619 bayou to bayou",0,0,10],[0,"Apr-22-2026","Dad",175,"619 bayou to bayou",0,0,10],[0,"Apr-22-2026","Yuli",125,"619 bayou to bayou",0,0,10],[0,"Apr-23-2026","Gerald",275,"619 bayou to bayou",0,0,10],[0,"Apr-23-2026","Dad",225,"619 bayou to bayou",0,0,10],[0,"Apr-28-2026","Gerald",200,"413 Breemen circle",0,0,10],[0,"Apr-28-2026","Dad",150,"413 Breemen circle",0,0,10],[0,"Apr-28-2026","Jorge",175,"413 Breemen circle",0,0,10],[0,"Apr-30-2026","Gerald",150,"731 N Walter Dr",0,0,10],[0,"Apr-30-2026","Dad",100,"731 N Walter Dr",0,0,10],[0,"Apr-30-2026","Jorge",125,"731 N Walter Dr",0,0,10],[0,"Apr-30-2026","Yuli",100,"731 N Walter Dr",0,0,10],[0,"May-06-2026","Gerald",125,"Summerfield job",0,0,11],[0,"May-06-2026","Dad",100,"Summerfield job",0,0,11],[0,"May-06-2026","Jorge",100,"Summerfield job",0,0,11],[0,"May-06-2026","Yuli",75,"200 herbs saint",0,0,11],[0,"May-07-2026","Gerald",150,"205 Waterhouse rd",0,0,11],[0,"May-07-2026","Jorge",125,"205 Waterhouse rd",0,0,11],[0,"May-08-2026","Gerald",75,"210 N William Dr",0,0,11],[0,"May-11-2026","Gerald",200,"607 Canberra",0,0,11],[0,"May-11-2026","Jorge",175,"607 Canberra",0,0,11],[0,"May-11-2026","Dad",175,"607 Canberra",0,0,11],[0,"May-12-2026","Gerald",250,"112 woodsboro",0,0,11],[0,"May-12-2026","Jorge",200,"112 woodsboro",0,0,11],[0,"May-12-2026","Yuli",125,"112 woodsboro",0,0,11],[0,"May-13-2026","Gerald",300,"211 Hollingsworth",0,0,11],[0,"May-13-2026","Jorge",250,"211 Hollingsworth",0,0,11],[0,"May-13-2026","Yuli",250,"211 Hollingsworth",0,0,11],[0,"May-15-2026","Gerald",225,"3045 Highway",0,0,11],[0,"May-15-2026","Dad",175,"3045 Highway",0,0,11],[0,"May-15-2026","Jorge",175,"3045 Highway",0,0,11],[0,"May-15-2026","Yuli",175,"3045 Highway",0,0,11],[0,"May-17-2026","Jorge",125,"9 larkspur lane",0,0,11],[0,"May-17-2026","Dad",100,"9 larkspur lane",0,0,11],[0,"May-17-2026","Yuli",100,"9 larkspur lane",0,0,11],[0,"May-17-2026","Alejandra",75,"9 larkspur lane",0,0,11],[0,"May-18-2026","Gerald",125,"839 golden grain rd",0,0,11],[0,"May-18-2026","Dad",100,"839 golden grain rd",0,0,11],[0,"May-18-2026","Jorge",100,"839 golden grain rd",0,0,11],[0,"May-18-2026","Gerald",125,"2234 Robley",0,0,11],[0,"May-18-2026","Dad",100,"2234 Robley",0,0,11],[0,"May-18-2026","Jorge",100,"2234 Robley",0,0,11],[0,"May-19-2026","Gerald",300,"233 Chimney rock blvd",0,0,11],[0,"May-19-2026","Dad",225,"233 Chimney rock blvd",0,0,11],[0,"May-19-2026","Jorge",250,"233 Chimney rock blvd",0,0,11],[0,"May-19-2026","Yuli",225,"233 Chimney rock blvd",0,0,11],[0,"May-21-2026","Gerald",250,"311 lasserre",0,0,11],[0,"May-21-2026","Jorge",200,"311 lasserre",0,0,11],[0,"May-21-2026","El Flako",200,"311 lasserre",0,0,11],[0,"May-21-2026","Gerald",100,"311 lasserre",1,0,11],[0,"May-22-2026","Gerald",250,"12728 isle road",0,0,11],[0,"May-22-2026","Dad",125,"12728 isle road",0,0,11],[0,"May-22-2026","Jorge",200,"12728 isle road",0,0,11],[0,"Jun-02-2026","El Flako",300,"401 broadmore blvd",0,0,12],[0,"Jun-03-2026","Gerald",225,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-03-2026","Dad",150,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-03-2026","Jorge",175,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-03-2026","Yuli",150,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-04-2026","Gerald",75,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-04-2026","Yuli",50,"101 westgreen hill circle (1)",0,0,12],[0,"Jun-03-2026","El Flako",150,"414 Gordon Crocket (3)",0,0,12],[0,"Jun-08-2026","El Flako",300,"13710 estate circle",0,0,12],[0,"Jun-09-2026","El Flako",300,"113 country living dr",0,0,12],[0,"Jun-13-2026","El Flako",75,"223 wood oak",0,0,12],[0,"Jun-17-2026","Gerald",150,"108 Stephanie",0,0,12],[0,"Jun-17-2026","Dad",150,"108 Stephanie",0,0,12],[0,"Jun-17-2026","El Flako",150,"113 country living (1)",0,0,12],[0,"Jun-17-2026","El Flako",125,"104 bridge creek cove (1)",0,0,12],[0,"Jun-17-2026","El Flako",300,"104 bridge creek cove (1)",0,0,12],[0,"Jun-18-2026","Gerald",175,"83 Hidden hills",0,0,12],[0,"Jun-18-2026","Dad",150,"83 Hidden hills",0,0,12],[0,"Jun-19-2026","Gerald",250,"302 big lake run",0,0,12],[0,"Jun-19-2026","Dad",150,"302 big lake run",0,0,12],[0,"Jun-19-2026","Jorge",200,"302 big lake run",0,0,12],[0,"Jun-22-2026","Dad",75,"302 big lake run",0,0,12],[0,"Jun-22-2026","Jorge",125,"302 big lake run",0,0,12],[0,"Jun-23-2026","El Flako",75,"101 Hermitage ave (1)",0,0,12],[0,"Jun-24-2026","Gerald",125,"210 N William Dr",0,0,12],[0,"Jun-26-2026","Jorge",75,"210 N William Dr",0,0,12],[0,"Jun-27-2026","Jorge",150,"210 N William Dr",0,0,12],[0,"Jul-01-2026","El Flako",200,"117 Wheat Circle (1)",0,0,12],[0,"Jul-06-2026","El Flako",125,"425 row one",0,0,12],[0,"Jul-08-2026","Gerald",125,"100 Dusty Ridge Lane",0,0,12],[0,"Jul-09-2026","Gerald",150,"305 Olympics dr",0,0,12],[0,"Jul-09-2026","Gerald",50,"105 still waters (2)",0,0,12],[0,"Jul-15-2026","Gerald",150,"406 Lippi Blvd",0,0,12],[0,"Jul-17-2026","Gerald",300,"3045 Highway",0,0,12],[0,"Jul-17-2026","Yuli",200,"3045 Highway",0,0,12],[0,"Jul-20-2026","Gerald",75,"107 Mid Ocean Court (1)",0,0,12],[0,"Jul-20-2026","Yuli",75,"107 Mid Ocean Court (1)",0,0,12],[0,"Jul-20-2026","Gerald",75,"106 Mid Ocean Court",0,0,12],[0,"Jul-20-2026","Yuli",75,"106 Mid Ocean Court",0,0,12],[0,"Jul-21-2026","Gerald",150,"156 Manifique Rd",0,0,12],[0,"Jul-21-2026","Yuli",100,"156 Manifique Rd",0,0,12],[0,"Jul-22-2026","Gerald",150,"156 Manifique Rd",0,0,12],[0,"Jul-22-2026","Yuli",100,"156 Manifique Rd",0,0,12],[0,"Jul-23-2026","Gerald",200,"156 Manifique Rd",0,0,12],[0,"Jul-23-2026","Yuli",100,"156 Manifique Rd",0,0,12],[0,"Jul-24-2026","Gerald",175,"304 highland oaks",0,0,12],[0,"Jul-24-2026","Yuli",125,"304 highland oaks",0,0,12],[0,"Jul-27-2026","Gerald",400,"304 highland oaks",0,0,12],[0,"Jul-27-2026","Yuli",200,"304 highland oaks",0,0,12],[0,"Jul-25-2026","Gerald",125,"156 Manifique Rd",0,0,12],[0,"Jul-25-2026","Yuli",50,"156 Manifique Rd",0,0,12],[0,"Jul-28-2026","Gerald",300,"156 Manifique Rd",0,0,12],[0,"Jul-28-2026","Yuli",200,"156 Manifique Rd",0,0,12],[0,"Jul-30-2026","Gerald",250,"156 Manifique Rd",0,0,12],[0,"Jul-30-2026","Yuli",100,"156 Manifique Rd",0,0,12],[0,"Jul-31-2026","Gerald",250,"156 Manifique Rd",0,0,12],[0,"Jul-31-2026","Yuli",150,"156 Manifique Rd",0,0,12],[0,"Aug-03-2026","Yuli",150,"105 finsbury lane",0,0,13],[0,"Aug-04-2026","Gerald",300,"2019 sugarmill rd",0,0,13],[0,"Aug-04-2026","Dad",200,"2019 sugarmill rd",0,0,13],[0,"Aug-05-2026","Gerald",300,"2019 sugarmill rd",0,0,13],[0,"Aug-05-2026","Dad",200,"2019 sugarmill rd",0,0,13],[0,"Aug-06-2026","Gerald",225,"2019 sugarmill rd",0,0,13],[0,"Aug-06-2026","Jorge",175,"2019 sugarmill rd",0,0,13],[0,"Aug-07-2026","Gerald",250,"2019 sugarmill rd",0,0,13],[0,"Aug-05-2026","Yuli",200,"204 Parker lane",0,0,13],[0,"Aug-05-2026","Jorge",250,"204 Parker lane",0,0,13],[0,"Aug-10-2026","Gerald",125,"201 belle grove",0,0,13],[0,"Aug-10-2026","Jorge",125,"201 belle grove",0,0,13],[0,"Aug-10-2026","Dad",75,"201 belle grove",0,0,13],[0,"Aug-10-2026","Yuli",75,"201 belle grove",0,0,13],[0,"Aug-11-2026","Gerald",225,"201 belle grove",0,0,13],[0,"Aug-11-2026","Jorge",250,"201 belle grove",0,0,13],[0,"Aug-11-2026","Yuli",175,"201 belle grove",0,0,13],[0,"Aug-12-2026","Gerald",275,"201 belle grove",0,0,13],[0,"Aug-12-2026","Jorge",250,"201 belle grove",0,0,13],[0,"Aug-12-2026","Yuli",150,"201 belle grove",0,0,13],[0,"Aug-13-2026","Gerald",225,"204 Lei caster lane",0,0,13],[0,"Aug-13-2026","Jorge",200,"204 Lei caster lane",0,0,13],[0,"Aug-14-2026","Gerald",225,"83 Hidden Hills (1)",0,0,13],[0,"Aug-14-2026","Dad",150,"83 Hidden Hills (1)",0,0,13],[0,"Aug-14-2026","Jorge",200,"83 Hidden Hills (1)",0,0,13],[0,"Aug-14-2026","Yuli",150,"83 Hidden Hills (1)",0,0,13],[1,"Jan-13-2026","Gerald",300,"13858 LA Hwy 92",0,0,14],[1,"Jan-13-2026","Jorge",250,"13858 LA Hwy 92",0,0,14],[1,"Jan-13-2026","El Pepe",225,"13858 LA Hwy 92",0,0,14],[1,"Jan-14-2026","Gerald",225,"13858 LA Hwy 92",0,0,14],[1,"Jan-14-2026","El Pepe",150,"13858 LA Hwy 92",0,0,14],[1,"Jan-16-2026","Gerald",400,"13858 LA Hwy 92",0,0,14],[1,"Jan-16-2026","Jorge",250,"13858 LA Hwy 92",0,0,14],[1,"Jan-16-2026","El Pepe",200,"13858 LA Hwy 92",0,0,14],[1,"Jan-19-2026","Gerald",325,"119 S Locksley",0,0,14],[1,"Jan-19-2026","El Pepe",125,"119 S Locksley",0,0,14],[1,"Jan-19-2026","Jorge",150,"119 S Locksley",0,0,14],[1,"Jan-20-2026","Gerald",300,"119 S Locksley",0,0,14],[1,"Jan-20-2026","El Pepe",150,"119 S Locksley",0,0,14],[1,"Jan-20-2026","Jorge",180,"119 S Locksley",0,0,14],[1,"Jan-21-2026","Gerald",100,"119 S Locksley",0,0,14],[1,"Jan-21-2026","El Pepe",75,"119 S Locksley",0,0,14],[1,"Jan-22-2026","Gerald",225,"119 S Locksley",0,0,14],[1,"Jan-22-2026","El Pepe",125,"119 S Locksley",0,0,14],[1,"Jan-22-2026","Jorge",140,"119 S Locksley",0,0,14],[1,"Feb-03-2026","Gerald",300,"Prime Tech",0,0,14],[1,"Feb-03-2026","El Pepe",200,"Prime Tech",0,0,14],[1,"Feb-05-2026","Gerald",175,"Prime Tech",0,0,14],[1,"Feb-05-2026","El Pepe",125,"Prime Tech",0,0,14],[1,"Feb-07-2026","Gerald",150,"Prime Tech",0,0,14],[1,"Feb-07-2026","El Pepe",125,"Prime Tech",0,0,14],[1,"Feb-04-2026","Gerald",400,"200 East Weeks",0,0,14],[1,"Feb-04-2026","El Pepe",150,"200 East Weeks",0,0,14],[1,"Feb-04-2026","Jorge",200,"200 East Weeks",0,0,14],[1,"Feb-05-2026","Gerald",150,"200 East Weeks",0,0,14],[1,"Feb-05-2026","El Pepe",75,"200 East Weeks",0,0,14],[1,"Feb-05-2026","Jorge",175,"200 East Weeks",0,0,14],[1,"Feb-06-2026","Gerald",225,"200 East Weeks",0,0,14],[1,"Feb-06-2026","El Pepe",125,"200 East Weeks",0,0,14],[1,"Feb-06-2026","Jorge",150,"200 East Weeks",0,0,14],[1,"Feb-13-2026","Gerald",225,"120 Bowen Lane",0,0,15],[1,"Feb-13-2026","El Pepe",80,"120 Bowen Lane",0,0,15],[1,"Feb-13-2026","Jorge",150,"120 Bowen Lane",0,0,15],[1,"Feb-16-2026","Gerald",125,"107 Muscadine Lane",0,0,15],[1,"Feb-16-2026","El Pepe",75,"107 Muscadine Lane",0,0,15],[1,"Feb-16-2026","Jorge",75,"107 Muscadine Lane",0,0,15],[1,"Feb-18-2026","Gerald",150,"107 Muscadine Lane",0,0,15],[1,"Feb-18-2026","Jorge",100,"107 Muscadine Lane",0,0,15],[1,"Feb-18-2026","Yuli",80,"107 Muscadine Lane",0,0,15],[1,"Feb-25-2026","Gerald",300,"405 Kilbourne Circle",0,0,16],[1,"Feb-25-2026","El Pepe",125,"405 Kilbourne Circle",0,0,16],[1,"Feb-25-2026","Jorge",175,"405 Kilbourne Circle",0,0,16],[1,"Feb-26-2026","Gerald",300,"405 Kilbourne Circle",0,0,16],[1,"Feb-26-2026","El Pepe",150,"405 Kilbourne Circle",0,0,16],[1,"Feb-26-2026","Jorge",225,"405 Kilbourne Circle",0,0,16],[1,"Feb-27-2026","Gerald",300,"405 Kilbourne Circle",0,0,16],[1,"Feb-27-2026","El Pepe",150,"405 Kilbourne Circle",0,0,16],[1,"Feb-27-2026","Jorge",200,"405 Kilbourne Circle",0,0,16],[1,"Mar-02-2026","Gerald",150,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-02-2026","Jorge",100,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-02-2026","El Pepe",100,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-03-2026","Gerald",150,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-03-2026","Jorge",100,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-03-2026","El Pepe",100,"104 Green Mountain Ridge St",0,0,17],[1,"Mar-02-2026","Gerald",150,"104 Killarney Ct",0,0,17],[1,"Mar-02-2026","Jorge",100,"104 Killarney Ct",0,0,17],[1,"Mar-02-2026","El Pepe",100,"104 Killarney Ct",0,0,17],[1,"Mar-03-2026","Gerald",200,"104 Killarney Ct",0,0,17],[1,"Mar-03-2026","Jorge",150,"104 Killarney Ct",0,0,17],[1,"Mar-03-2026","El Pepe",150,"104 Killarney Ct",0,0,17],[1,"Mar-09-2026","Gerald",300,"1072 Dublin Street",0,0,17],[1,"Mar-09-2026","El Pepe",300,"1072 Dublin Street",0,0,17],[1,"Mar-09-2026","Jorge",200,"1072 Dublin Street",0,0,17],[1,"Mar-10-2026","Gerald",320,"210 Shadowbrush Bend",0,0,17],[1,"Mar-10-2026","El Pepe",200,"210 Shadowbrush Bend",0,0,17],[1,"Mar-10-2026","Jorge",240,"210 Shadowbrush Bend",0,0,17],[1,"Mar-10-2026","El Flako",60,"210 Shadowbrush Bend",0,0,17],[1,"Mar-13-2026","Gerald",400,"210 Shadowbrush Bend",0,0,17],[1,"Mar-13-2026","El Pepe",150,"210 Shadowbrush Bend",0,0,17],[1,"Mar-13-2026","Jorge",200,"210 Shadowbrush Bend",0,0,17],[1,"Mar-13-2026","El Flako",50,"210 Shadowbrush Bend",0,0,17],[1,"Mar-16-2026","Gerald",300,"Bollard Job",0,0,17],[1,"Mar-17-2026","Gerald",200,"Delmar Job",0,0,17],[1,"Mar-17-2026","El Pepe",150,"Delmar Job",0,0,17],[1,"May-01-2026","Gerald",175,"Prime Tech #3",0,0,18],[1,"May-01-2026","El Pepe",125,"Prime Tech #3",0,0,18],[1,"May-02-2026","Gerald",75,"Prime Tech #3",0,0,18],[1,"May-02-2026","El Pepe",50,"Prime Tech #3",0,0,18],[1,"May-04-2026","Gerald",300,"Prime Tech #3",0,0,18],[1,"May-04-2026","El Pepe",150,"Prime Tech #3",0,0,18],[1,"May-05-2026","Gerald",250,"Prime Tech #3",0,0,18],[1,"May-05-2026","El Pepe",150,"Prime Tech #3",0,0,18],[1,"Jun-26-2026","Gerald",225,"Prime Tech #3",0,0,19],[1,"Jun-26-2026","El Pepe",150,"Prime Tech #3",0,0,19],[1,"Jun-30-2026","Gerald",175,"Prime Tech #3",0,0,19],[1,"Jun-30-2026","El Pepe",125,"Prime Tech #3",0,0,19],[1,"May-05-2026","Jorge",200,"100 Bowen Ln",0,0,18],[1,"May-06-2026","Gerald",150,"100 Bowen Ln",0,0,18],[1,"May-06-2026","Jorge",100,"100 Bowen Ln",0,0,18],[1,"May-06-2026","El Pepe",100,"100 Bowen Ln",0,0,18],[1,"May-07-2026","Gerald",90,"100 Bowen Ln",0,0,18],[1,"May-07-2026","Jorge",60,"100 Bowen Ln",0,0,18],[1,"May-14-2026","Gerald",400,"100 Bowen Ln",0,0,18],[1,"May-14-2026","Jorge",200,"100 Bowen Ln",0,0,18],[1,"May-14-2026","El Pepe",150,"100 Bowen Ln",0,0,18],[1,"May-20-2026","Gerald",200,"108 haricot rd (JOB 1)",0,0,20],[1,"May-20-2026","El Pepe",150,"108 haricot rd (JOB 1)",0,0,20],[1,"May-20-2026","Jorge",175,"108 haricot rd (JOB 1)",0,0,20],[1,"Jun-01-2026","Gerald",125,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-01-2026","El Pepe",50,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-01-2026","Jorge",50,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-01-2026","Yuli",50,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-02-2026","Gerald",275,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-02-2026","El Pepe",125,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-02-2026","Jorge",150,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-02-2026","Yuli",175,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-09-2026","Gerald",225,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-09-2026","El Pepe",150,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-09-2026","Yuli",150,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-10-2026","Gerald",300,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-10-2026","El Pepe",150,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-10-2026","Jorge",200,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-10-2026","El Flako",225,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-10-2026","Yuli",150,"108 haricot rd (JOB 1)",0,0,21],[1,"Jun-11-2026","Gerald",325,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-11-2026","Jorge",275,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-12-2026","Gerald",275,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-12-2026","El Pepe",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-12-2026","Jorge",225,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-12-2026","Yuli",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-13-2026","Gerald",250,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-13-2026","Jorge",225,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-15-2026","Gerald",300,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-15-2026","El Pepe",75,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-15-2026","Jorge",225,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-15-2026","Yuli",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-16-2026","Gerald",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-16-2026","El Pepe",50,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-16-2026","Jorge",25,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-22-2026","Gerald",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-22-2026","El Pepe",50,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-22-2026","Jorge",25,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-23-2026","Gerald",225,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-23-2026","Jorge",200,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-23-2026","El Pepe",125,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-25-2026","Gerald",225,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-25-2026","Jorge",150,"108 haricot rd (JOB 2)",0,0,21],[1,"Jun-25-2026","Yuli",125,"108 haricot rd (JOB 2)",0,0,21],[1,"May-26-2026","Gerald",275,"261 Louise St",0,0,20],[1,"May-26-2026","El Pepe",175,"261 Louise St",0,0,20],[1,"May-26-2026","Jorge",175,"261 Louise St",0,0,20],[1,"May-27-2026","Gerald",90,"261 Louise St",0,0,20],[1,"May-27-2026","El Pepe",50,"261 Louise St",0,0,20],[1,"May-27-2026","Jorge",50,"261 Louise St",0,0,20],[1,"May-29-2026","Gerald",350,"261 Louise St",0,0,20],[1,"May-29-2026","El Pepe",225,"261 Louise St",0,0,20],[1,"May-29-2026","Jorge",275,"261 Louise St",0,0,20],[1,"Jun-01-2026","Gerald",100,"261 Louise St",0,0,21],[1,"Jun-01-2026","El Pepe",75,"261 Louise St",0,0,21],[1,"Jun-01-2026","Jorge",75,"261 Louise St",0,0,21],[1,"Jun-01-2026","Yuli",75,"261 Louise St",0,0,21],[1,"May-28-2026","Gerald",175,"Tractor Supply Company",0,0,20],[1,"May-28-2026","El Pepe",125,"Tractor Supply Company",0,0,20],[1,"Jun-05-2026","Gerald",325,"Walmart Concrete Job",0,0,21],[1,"Jun-05-2026","El Pepe",125,"Walmart Concrete Job",0,0,21],[1,"Jun-05-2026","Jorge",250,"Walmart Concrete Job",0,0,21],[1,"Jun-05-2026","El Flako",300,"Walmart Concrete Job",0,0,21],[1,"Jun-30-2026","Jorge",175,"342 Gerald dr",0,0,19],[1,"Jun-30-2026","El Flako",175,"342 Gerald dr",0,0,19],[1,"Jul-01-2026","Gerald",175,"342 Gerald dr",0,0,19],[1,"Jul-01-2026","Jorge",150,"342 Gerald dr",0,0,19],[1,"Jul-02-2026","Gerald",225,"342 Gerald dr",0,0,19],[1,"Jul-02-2026","Jorge",175,"342 Gerald dr",0,0,19],[1,"Jul-02-2026","El Pepe",150,"213 Parklane Rd",0,0,22],[1,"Jul-02-2026","El Flako",225,"213 Parklane Rd",0,0,22],[1,"Jul-03-2026","Gerald",75,"213 Parklane Rd",0,0,22],[1,"Jul-03-2026","El Pepe",150,"213 Parklane Rd",0,0,22],[1,"Jul-03-2026","El Flako",75,"213 Parklane Rd",0,0,22],[1,"Jul-03-2026","Jorge",175,"213 Parklane Rd",0,0,22],[1,"Jul-06-2026","Gerald",175,"213 Parklane Rd",0,0,22],[1,"Jul-06-2026","El Pepe",125,"213 Parklane Rd",0,0,22],[1,"Jul-06-2026","El Flako",175,"213 Parklane Rd",0,0,22],[1,"Jul-06-2026","Jorge",150,"213 Parklane Rd",0,0,22],[1,"Jul-07-2026","Gerald",150,"213 Parklane Rd",0,0,22],[1,"Jul-07-2026","El Flako",75,"213 Parklane Rd",0,0,22],[1,"Jul-10-2026","Gerald",300,"213 Parklane Rd",0,0,22],[1,"Jul-10-2026","El Flako",250,"213 Parklane Rd",0,0,22],[1,"Jul-10-2026","Yuli",150,"213 Parklane Rd",0,0,22],[1,"Jul-02-2026","Gerald",150,"1248 E Alexander St",0,0,22],[1,"Jul-02-2026","Jorge",125,"1248 E Alexander St",0,0,22],[1,"Jul-16-2026","Gerald",150,"Concrete Repair Job",0,0,12],[1,"Jul-27-2026","El Pepe",150,"128 Pembroke",0,0,12],[1,"Jul-28-2026","El Pepe",150,"128 Pembroke",0,0,12],[1,"Jul-29-2026","El Pepe",100,"128 Pembroke",0,0,12],[1,"Jul-29-2026","Gerald",200,"113 Breton dr",0,0,12],[1,"Jul-29-2026","Yuli",100,"113 Breton dr",0,0,12]];
+const PAIDDATES = ["Jan-15-2026","Feb-14-2026","Feb-21-2026","Feb-28-2026","Mar-07-2026","Mar-14-2026","Mar-21-2026","Mar-28-2026","Apr-04-2026","Apr-11-2026","Apr-25-2026","May-09-2026","Jul-31-2026","Aug-14-2026","Feb-06-2026","Feb-20-2026","Mar-06-2026","Mar-20-2026","May-20-2026","Jul-03-2026","Jun-05-2026","Jun-19-2026","Jul-17-2026"];
+
+/* column positions on both payroll tabs (0-indexed).
+   paid = column J, the payment date. Blank means the job is still payable. */
+const COL = { date:3, worker:4, hours:5, amount:6, job:7, notes:8, paid:9 };
+
+const S = { all:[], workers:[], worker:null, period:'all', from:null, to:null, chart:null };
+const PERIODS = [['1m','1M'],['3m','3M'],['6m','6M'],['1y','1Y'],['all','All']];
+
+/* ---------- parsing ---------- */
+const MONTHS={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseDate(v){
+  if(v instanceof Date) return isNaN(v)?null:v;
+  if(typeof v!=='string') return null;
+  const s=v.trim(); if(!s) return null;
+  let m=s.match(/^([A-Za-z]{3})-(\d{1,2})-(\d{4})$/);            // Jan-06-2026
+  if(m&&MONTHS[m[1].toLowerCase()]!==undefined) return new Date(+m[3],MONTHS[m[1].toLowerCase()],+m[2]);
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(m){let y=+m[3]; if(y<100)y+=2000; return new Date(y,+m[1]-1,+m[2]);}
+  const d=new Date(s); return isNaN(d)?null:d;
+}
+function num(v){
+  if(typeof v==='number') return isFinite(v)?v:0;
+  if(typeof v!=='string') return 0;
+  const s=v.replace(/[^0-9.\-]/g,''); const n=parseFloat(s);
+  return isFinite(n)?n:0;
+}
+const dayKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const sod=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const addMonths=(d,n)=>new Date(d.getFullYear(),d.getMonth()+n,d.getDate());
+
+const money=n=>CONFIG.currency+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const short=n=>CONFIG.currency+(Math.abs(n)>=1000?(n/1000).toFixed(1)+'k':n.toFixed(0));
+const hrs=n=>n.toLocaleString(undefined,{minimumFractionDigits:n%1?1:0,maximumFractionDigits:1});
+const fmtDay=d=>d.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'});
+const fmtMon=d=>d.toLocaleDateString(undefined,{month:'short',year:'2-digit'});
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function bigMoney(n){const s=money(n),i=s.lastIndexOf('.');
+  return i<0?esc(s):esc(s.slice(0,i))+'<span class="dec">'+esc(s.slice(i))+'</span>';}
+const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+function paintAvatar(el,w,size){ el.className='av '+size; el.textContent = w?initials(w.name):'?'; }
+
+/* ---------- load ---------- */
+async function load(){
+  if(LIVE.enabled && LIVE.flowergirlz && LIVE.concreteWorkz){
+    try{
+      const [a,b]=await Promise.all([fetchTab(LIVE.flowergirlz,'Flowergirlz'), fetchTab(LIVE.concreteWorkz,'Concrete Workz')]);
+      S.all=a.concat(b);
+      document.getElementById('snap').textContent='Live from the sheet, read '+new Date().toLocaleString();
+    }catch(e){ useSnapshot('Live read failed, showing the saved snapshot'); }
+  } else {
+    useSnapshot('Snapshot of 26 Oct 2026 - '+SNAPSHOT.length+' job rows');
+  }
+  buildWorkers();
+  buildSwitcher();
+  const asked=new URLSearchParams(location.search).get('worker')||CONFIG.defaultWorker;
+  selectWorker(S.workers.find(w=>w.name.toLowerCase()===String(asked).toLowerCase())||S.workers[0]);
+}
+
+function useSnapshot(note){
+  S.all=SNAPSHOT.map(r=>({business:BIZ[r[0]], date:parseDate(r[1]), worker:r[2],
+                          pay:r[5]?0:r[3], tip:r[5]?r[3]:0, job:r[4], hours:r[6],
+                          paidOn:r[7]>=0?PAIDDATES[r[7]]:''}));
+  document.getElementById('snap').textContent=note;
+}
+
+async function fetchTab(url,biz){
+  const res=await fetch(url+(url.includes('?')?'&':'?')+'cb='+Date.now());
+  if(!res.ok) throw new Error(res.status);
+  const grid=Papa.parse(await res.text(),{header:false,skipEmptyLines:false}).data;
+  const out=[];
+  for(let i=2;i<grid.length;i++){
+    const r=grid[i]||[];
+    const d=parseDate((r[COL.date]||'').trim());
+    const w=(r[COL.worker]||'').trim();
+    if(!d||!w) continue;
+    const amt=num(r[COL.amount]);
+    const isTip=/tip/i.test((r[COL.notes]||''));
+    out.push({business:biz, date:d, worker:w, pay:isTip?0:amt, tip:isTip?amt:0,
+              job:(r[COL.job]||'').trim(), hours:num(r[COL.hours]),
+              paidOn:(r[COL.paid]||'').trim()});
+  }
+  return out;
+}
+
+function buildWorkers(){
+  const by=new Map();
+  S.all.forEach(r=>{
+    if(!by.has(r.worker)) by.set(r.worker,{name:r.worker,total:0,n:0});
+    const w=by.get(r.worker); w.total+=r.pay+r.tip; w.n++;
+  });
+  S.workers=[...by.values()].sort((a,b)=>b.total-a.total);
+}
+
+/* ---------- switcher ---------- */
+function buildSwitcher(){
+  const menu=document.getElementById('switchMenu'); menu.innerHTML='';
+  S.workers.forEach(w=>{
+    const b=document.createElement('button'); b.className='wrow'; b.type='button'; b.dataset.name=w.name;
+    const av=document.createElement('span'); paintAvatar(av,w,'s');
+    const t=document.createElement('span');
+    t.innerHTML='<span class="nm">'+esc(w.name)+'</span><span class="mt">'+w.n+' job'+(w.n===1?'':'s')+'</span>';
+    const a=document.createElement('span'); a.className='amt'; a.textContent=money(w.total);
+    b.append(av,t,a);
+    b.onclick=()=>{ selectWorker(w); closeMenu(); };
+    menu.appendChild(b);
+  });
+  const btn=document.getElementById('switchBtn');
+  btn.onclick=e=>{ e.stopPropagation(); btn.setAttribute('aria-expanded',menu.classList.toggle('open')); };
+  menu.onclick=e=>e.stopPropagation();
+  document.addEventListener('click',closeMenu);
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeMenu(); });
+}
+function closeMenu(){
+  document.getElementById('switchMenu').classList.remove('open');
+  document.getElementById('switchBtn').setAttribute('aria-expanded',false);
+}
+
+function selectWorker(w){
+  if(!w) return;
+  S.worker=w;
+  paintAvatar(document.getElementById('heroAv'),w,'l');
+  paintAvatar(document.getElementById('switchAv'),w,'s');
+  document.getElementById('switchName').textContent=w.name;
+  document.getElementById('heroName').textContent=w.name+' Payroll Dashboard';
+  document.getElementById('heroTag').textContent='Worker';
+  document.title=w.name+' Payroll Dashboard';
+  document.querySelectorAll('.wrow').forEach(r=>r.setAttribute('aria-current',r.dataset.name===w.name));
+  const u=new URL(location.href); u.searchParams.set('worker',w.name); history.replaceState(null,'',u);
+  buildPeriods();
+  setPeriod(S.period);
+}
+
+/* ---------- period ---------- */
+const workerRows=()=>S.all.filter(r=>r.worker===S.worker.name);
+
+function buildPeriods(){
+  const el=document.getElementById('periods');
+  if(el.childElementCount) return;
+  PERIODS.forEach(p=>{
+    const b=document.createElement('button'); b.textContent=p[1]; b.dataset.k=p[0];
+    b.setAttribute('aria-pressed',p[0]===S.period);
+    b.onclick=()=>setPeriod(p[0]);
+    el.appendChild(b);
+  });
+  ['from','to'].forEach(id=>document.getElementById(id).onchange=()=>setPeriod('custom'));
+}
+
+function setPeriod(k){
+  S.period=k;
+  document.querySelectorAll('#periods button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===k));
+  const ds=workerRows().map(r=>r.date).sort((a,b)=>a-b);
+  const min=ds.length?sod(ds[0]):sod(new Date());
+  const max=ds.length?sod(ds[ds.length-1]):sod(new Date());
+  let from,to=max;
+  switch(k){
+    case '1m': from=addMonths(max,-1); break;
+    case '3m': from=addMonths(max,-3); break;
+    case '6m': from=addMonths(max,-6); break;
+    case '1y': from=addMonths(max,-12); break;
+    case 'all': from=min; break;
+    case 'custom':
+      from=parseDate(document.getElementById('from').value)||min;
+      to  =parseDate(document.getElementById('to').value)  ||max;
+      break;
+  }
+  if(from<min) from=min;
+  S.from=from; S.to=to;
+  document.getElementById('from').value=dayKey(from);
+  document.getElementById('to').value=dayKey(to);
+  render();
+}
+
+const inWindow=(r,f,t)=>r.date>=f&&r.date<addDays(t,1);
+const sum=(rows,k)=>rows.reduce((a,r)=>a+(r[k]||0),0);
+
+/* ---------- render ---------- */
+function render(){
+  const all=workerRows();
+  const rows=all.filter(r=>inWindow(r,S.from,S.to));
+  const days=Math.round((S.to-S.from)/86400000)+1;
+  const prev=all.filter(r=>inWindow(r,addDays(S.from,-days),addDays(S.from,-1)));
+
+  const jobs=rows.filter(r=>r.tip===0).length;
+  const nb=[...new Set(rows.map(r=>r.business))].length;
+  document.getElementById('heroMeta').textContent =
+    jobs+' job'+(jobs===1?'':'s')+' · '+nb+' business'+(nb===1?'':'es')+' · '+fmtDay(S.from)+' – '+fmtDay(S.to);
+
+  /* a job with no payment date in column J has not been paid yet */
+  const due=rows.filter(r=>!r.paidOn);
+  const dueAmt=sum(due,'pay')+sum(due,'tip');
+  const badge=document.getElementById('payable');
+  if(due.length){
+    badge.className='paybadge owed';
+    badge.textContent=money(dueAmt)+' payable · '+due.length+' job'+(due.length===1?'':'s');
+  } else {
+    badge.className='paybadge clear';
+    badge.textContent='All paid';
+  }
+
+  renderKPIs(rows,prev);
+  try{ renderChart(rows); }catch(e){ chartFallback(); }
+  renderBusinesses(rows);
+}
+
+/* the tables must survive a blocked or slow chart library */
+function chartFallback(){
+  const box=document.querySelector('.chartbox');
+  if(box) box.innerHTML='<div class="state"><h3>Chart could not load</h3>'
+    +'<p>The chart library is blocked on this network. Every figure below is still correct.</p></div>';
+}
+
+function renderKPIs(rows,prev){
+  const host=document.getElementById('kpis'); host.innerHTML='';
+  const defs=[
+    {lbl:'Total earnings', key:'pay', ico:'◈', accent:'var(--teal)',
+     glow:'radial-gradient(circle,rgba(31,209,193,.10),transparent 68%)', glow2:'rgba(31,209,193,.13)'},
+    {lbl:'Total tip amount', key:'tip', ico:'◆', accent:'var(--gold)',
+     glow:'radial-gradient(circle,rgba(255,176,32,.09),transparent 68%)', glow2:'rgba(255,176,32,.13)'},
+    {lbl:'Total hours worked', key:'hours', ico:'◷', accent:'var(--blue)',
+     glow:'radial-gradient(circle,rgba(10,132,255,.10),transparent 68%)', glow2:'rgba(10,132,255,.15)'}
+  ];
+  defs.forEach(c=>{
+    const v=sum(rows,c.key), p=sum(prev,c.key);
+    let cls='flat', txt='no earlier period', big, sub='';
+    if(p>0){ const pct=(v-p)/p*100; cls=pct>0.5?'up':pct<-0.5?'down':'flat'; txt=(pct>0?'+':'')+pct.toFixed(1)+'%'; }
+
+    if(c.key==='hours'){
+      const filled=rows.filter(r=>r.hours>0).length;
+      if(filled===0){
+        big='<div class="big empty">Not entered yet</div>';
+        cls='warn'; txt='0 of '+rows.length+' rows'; sub='Hours column is blank in the sheet';
+      } else {
+        big='<div class="big">'+esc(hrs(v))+'<span class="dec"> hrs</span></div>';
+        sub=filled+' of '+rows.length+' rows have hours';
+      }
+    } else if(c.key==='pay'){
+      const n=rows.filter(r=>r.pay>0).length;
+      const withTips=v+sum(rows,'tip');
+      big='<div class="big">'+bigMoney(v)+'</div>';
+      sub=(n?money(v/n)+' average  ·  ':'')+'with tips '+money(withTips);
+    } else {
+      const n=rows.filter(r=>r[c.key]>0).length;
+      big='<div class="big">'+bigMoney(v)+'</div>';
+      sub=n?n+' tip'+(n===1?'':'s')+' recorded':'none recorded';
+    }
+
+    const el=document.createElement('div');
+    el.className='card kpi';
+    el.style.cssText='--accent:'+c.accent+';--glow:'+c.glow+';--glow2:'+c.glow2;
+    el.innerHTML='<div class="top"><span class="ico">'+c.ico+'</span><span class="lbl">'+c.lbl+'</span></div>'
+      +big
+      +'<div class="sub"><span class="pill '+cls+'">'+esc(txt)+'</span><span>'+esc(sub)+'</span></div>';
+    host.appendChild(el);
+  });
+}
+
+function renderChart(rows){
+  document.getElementById('chartMeta').textContent=fmtDay(S.from)+' – '+fmtDay(S.to);
+  const pay=rows.filter(r=>r.tip===0);
+  const months=[...new Set(pay.map(r=>+new Date(r.date.getFullYear(),r.date.getMonth(),1)))].sort((a,b)=>a-b);
+  const bizzes=BIZ.filter(b=>pay.some(r=>r.business===b));
+
+  document.getElementById('legend').innerHTML=bizzes.map(b=>
+    '<span class="lg"><i style="background:'+BIZCOLOR[b]+'"></i>'+esc(b)+'</span>').join('');
+
+  const datasets=bizzes.map(b=>({
+    label:b,
+    data:months.map(m=>sum(pay.filter(r=>r.business===b&&+new Date(r.date.getFullYear(),r.date.getMonth(),1)===m),'pay')),
+    backgroundColor:BIZCOLOR[b],
+    borderRadius:{topLeft:5,topRight:5,bottomLeft:0,bottomRight:0},
+    borderSkipped:false, maxBarThickness:46
+  }));
+
+  if(S.chart){ S.chart.destroy(); S.chart=null; }
+  if(!months.length) return;
+  if(typeof Chart==='undefined'){ chartFallback(); return; }
+  S.chart=new Chart(document.getElementById('chart'),{
+    type:'bar',
+    data:{labels:months.map(m=>fmtMon(new Date(m))),datasets:datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#061a2b', borderColor:'rgba(31,209,193,.35)', borderWidth:1,
+          padding:13, cornerRadius:10, usePointStyle:true,
+          titleColor:'#fff', titleFont:{family:"'Poppins'",size:12.5,weight:'600'},
+          bodyColor:'#e6ecf1', bodyFont:{family:"'Poppins'",size:12},
+          footerColor:'#1fd1c1', footerFont:{family:"'Poppins'",size:11.5,weight:'600'},
+          callbacks:{
+            label:c=>' '+c.dataset.label+': '+money(c.parsed.y),
+            footer:items=>'Month total: '+money(items.reduce((a,x)=>a+x.parsed.y,0))
+          }
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{display:false}, border:{color:'rgba(230,236,241,.12)'},
+           ticks:{color:'#8fa3b5',font:{family:"'Poppins'",size:11.5,weight:'500'}}},
+        y:{stacked:true, grid:{color:'rgba(230,236,241,.06)'}, border:{display:false},
+           ticks:{color:'#8fa3b5',font:{family:"'Poppins'",size:11.5,weight:'500'},callback:v=>short(v)}}
+      }
+    }
+  });
+}
+
+function renderBusinesses(rows){
+  const host=document.getElementById('businesses'); host.innerHTML='';
+  if(!rows.length){
+    host.innerHTML='<div class="card panel" style="grid-column:1/-1"><div class="state">'
+      +'<h3>No jobs in this date range</h3>'
+      +'<p>Widen the range above, or pick another worker from the switcher.</p></div></div>';
+    return;
+  }
+
+  BIZ.forEach(b=>{
+    const rs=rows.filter(r=>r.business===b);
+    if(!rs.length) return;
+
+    /* one line per job, newest first; tips fold into the job they belong to */
+    const map=new Map();
+    rs.forEach(r=>{
+      const key=r.job+'|'+dayKey(r.date)+'|'+r.paidOn;
+      if(!map.has(key)) map.set(key,{job:r.job,date:r.date,hours:0,pay:0,tip:0,paidOn:r.paidOn});
+      const e=map.get(key); e.hours+=r.hours; e.pay+=r.pay; e.tip+=r.tip;
+    });
+    const lines=[...map.values()].sort((x,y)=>y.date-x.date);
+
+    const tH=sum(rs,'hours'), tP=sum(rs,'pay'), tT=sum(rs,'tip');
+    const dueRows=rs.filter(r=>!r.paidOn);
+    const tDue=sum(dueRows,'pay')+sum(dueRows,'tip');
+    const jobCount=lines.length;
+
+    const body=lines.map(r=>'<tr'+(r.paidOn?'':' class="duerow"')+'>'
+        +'<td class="job">'+esc(r.job||'—')+'</td>'
+        +'<td class="date">'+esc(fmtDay(r.date))+'</td>'
+        +'<td class="num">'+(r.hours?esc(hrs(r.hours)):'—')+'</td>'
+        +'<td class="num amt">'+esc(money(r.pay))+'</td>'
+        +'<td class="num tip'+(r.tip?'':' zero')+'">'+(r.tip?esc(money(r.tip)):'—')+'</td>'
+        +'<td class="status">'+(r.paidOn
+            ? '<span class="paid">'+esc(fmtDay(parseDate(r.paidOn)||r.date))+'</span>'
+            : '<span class="duechip">Payable</span>')+'</td>'
+      +'</tr>').join('');
+
+    const el=document.createElement('section');
+    el.className='card biz';
+    el.style.setProperty('--bc',BIZCOLOR[b]);
+    el.innerHTML=
+      '<div class="bizhead">'
+      +'<div class="biztitle"><span class="bn">'+esc(b)+'</span>'
+      +'<span class="cnt">'+jobCount+' job'+(jobCount===1?'':'s')+'</span></div>'
+      +'<div class="bizstats">'
+      +'<div><div class="k">Total hours</div><div class="v">'+(tH?esc(hrs(tH)):'—')+'</div></div>'
+      +'<div><div class="k">Total amount</div><div class="v teal">'+esc(money(tP))+'</div></div>'
+      +'<div><div class="k">Total tips</div><div class="v gold">'+esc(money(tT))+'</div></div>'
+      +'<div><div class="k">Amount + tips</div><div class="v">'+esc(money(tP+tT))+'</div></div>'
+      +(tDue?'<div><div class="k">Payable</div><div class="v gold">'+esc(money(tDue))+'</div></div>':'')
+      +'</div></div>'
+      +'<div class="tw"><table>'
+      +'<thead><tr><th>Job name</th><th>Dates of job</th>'
+      +'<th class="num">Hours</th><th class="num">Amount</th><th class="num">Tip</th>'
+      +'<th>Paid on</th></tr></thead>'
+      +'<tbody>'+body+'</tbody>'
+      +'<tfoot><tr><td class="lbl" colspan="2">Total</td>'
+      +'<td class="num">'+(tH?esc(hrs(tH)):'—')+'</td>'
+      +'<td class="num">'+esc(money(tP))+'</td>'
+      +'<td class="num">'+esc(money(tT))+'</td>'
+      +'<td class="lbl">'+(tDue?esc(money(tDue))+' due':'all paid')+'</td></tr></tfoot>'
+      +'</table></div>';
+    host.appendChild(el);
+  });
+}
+
+/* ---------- actions ---------- */
+document.getElementById('shareBtn').onclick=async function(){
+  const u=new URL(location.href);
+  if(S.worker) u.searchParams.set('worker',S.worker.name);
+  try{ await navigator.clipboard.writeText(u.toString()); toast('Link copied'); }
+  catch(e){ toast('Copy failed, use the address bar'); }
+};
+function toast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(function(){t.classList.remove('show')},2200);
+}
+
+load();
+</script>
+</body>
+</html>
